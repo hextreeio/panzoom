@@ -68,6 +68,9 @@ function createPanZoom(domElement, options) {
       : Number.POSITIVE_INFINITY;
   var minZoom = typeof options.minZoom === "number" ? options.minZoom : 0;
 
+  var twoFingerPan =
+    typeof options.twoFingerPan === "boolean" ? options.twoFingerPan : false;
+
   var boundsPadding =
     typeof options.boundsPadding === "number" ? options.boundsPadding : 0.05;
   var zoomDoubleClickSpeed =
@@ -102,6 +105,8 @@ function createPanZoom(domElement, options) {
   // cache mouse coordinates here
   var mouseX;
   var mouseY;
+  var oldMouseX;
+  var oldMouseY;
 
   var pinchZoomLength;
 
@@ -250,7 +255,7 @@ function createPanZoom(domElement, options) {
       dur = duration(from, to);
     }
 
-    var p = new Promise((resolve, _) => {
+    var p = new Promise((resolve) => {
       showRectangleAnimation = animate(from, to, {
         duration: dur,
         step: function (nextTransform) {
@@ -268,14 +273,14 @@ function createPanZoom(domElement, options) {
   }
 
   // should this be made public?
-  function transformToClientRect(transform) {
+  function transformToClientRect(_transform) {
     var clientRect = owner.getBoundingClientRect();
     var size = transformToScreen(clientRect.width, clientRect.height);
 
-    var w = size.x / transform.scale;
-    var h = size.y / transform.scale;
-    var l = transform.x / -transform.scale;
-    var t = transform.y / -transform.scale;
+    var w = size.x / _transform.scale;
+    var h = size.y / _transform.scale;
+    var l = _transform.x / -_transform.scale;
+    var t = _transform.y / -_transform.scale;
 
     return {
       top: t,
@@ -544,7 +549,7 @@ function createPanZoom(domElement, options) {
   }
 
   function internalMoveBy(dx, dy, smooth) {
-    var p = new Promise((resolve, _) => {
+    var p = new Promise((resolve) => {
       cancelAllAnimations();
 
       if (!smooth) {
@@ -785,6 +790,22 @@ function createPanZoom(domElement, options) {
       var secondTouchPoint = getOffsetXY(t2);
       mouseX = (firstTouchPoint.x + secondTouchPoint.x) / 2;
       mouseY = (firstTouchPoint.y + secondTouchPoint.y) / 2;
+
+      if (oldMouseX !== undefined && oldMouseY !== undefined) {
+        var dx = mouseX - oldMouseX;
+        var dy = mouseY - oldMouseY;
+
+        if (dx !== 0 && dy !== 0) {
+          triggerPanStart();
+        }
+
+        internalMoveBy(dx, dy);
+      }
+
+      // we remember the old mouse position to have a relative move
+      oldMouseX = mouseX;
+      oldMouseY = mouseY;
+
       if (transformOrigin) {
         var offset = getTransformOriginOffset();
         mouseX = offset.x;
@@ -912,6 +933,8 @@ function createPanZoom(domElement, options) {
     document.removeEventListener("touchcancel", handleTouchEnd);
     panstartFired = false;
     multiTouch = false;
+    oldMouseX = undefined;
+    oldMouseY = undefined;
     touchInProgress = false;
   }
 
@@ -921,17 +944,29 @@ function createPanZoom(domElement, options) {
 
     cancelAllAnimations();
 
-    var delta = e.deltaY;
-    if (e.deltaMode > 0) delta *= 100;
+    if (
+      twoFingerPan &&
+      !e.ctrlKey &&
+      !(e.deltaX == 0 && Math.abs(e.deltaY) > 90)
+    ) {
+      triggerPanStart();
 
-    var scaleMultiplier = getScaleMultiplier(delta);
-
-    if (scaleMultiplier !== 1) {
-      var offset = transformOrigin
-        ? getTransformOriginOffset()
-        : getOffsetXY(e);
-      publicZoomTo(offset.x, offset.y, scaleMultiplier);
+      internalMoveBy(e.wheelDeltaX * 0.5, e.wheelDeltaY * 0.5);
       e.preventDefault();
+    } else {
+      // default behaviour performs zoom on mousewheel
+      var delta = e.deltaY;
+      if (e.deltaMode > 0) delta *= 100;
+
+      var scaleMultiplier = getScaleMultiplier(delta);
+
+      if (scaleMultiplier !== 1) {
+        var offset = transformOrigin
+          ? getTransformOriginOffset()
+          : getOffsetXY(e);
+        publicZoomTo(offset.x, offset.y, scaleMultiplier);
+        e.preventDefault();
+      }
     }
   }
 
@@ -952,7 +987,7 @@ function createPanZoom(domElement, options) {
 
     cancelAllAnimations();
 
-    var p = new Promise((resolve, _) => {
+    var p = new Promise((resolve) => {
       zoomToAnimation = animate(from, to, {
         step: function (v) {
           zoomAbs(clientX, clientY, v.scale);
@@ -975,7 +1010,7 @@ function createPanZoom(domElement, options) {
 
     cancelAllAnimations();
 
-    var p = new Promise((resolve, _) => {
+    var p = new Promise((resolve) => {
       zoomToAnimation = animate(from, to, {
         step: function (v) {
           zoomAbs(clientX, clientY, v.scale);
@@ -1171,7 +1206,6 @@ function autoRun() {
       return;
     }
     var options = collectOptions(panzoomScript);
-    console.log(options);
     window[globalName] = createPanZoom(el, options);
   }
 
