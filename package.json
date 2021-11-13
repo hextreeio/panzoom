@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "tap --branches=30 --lines=30 --statements=30 --functions=30 test/*.js",
-    "build": "browserify -s panzoom ./index.js > dist/panzoom.js && uglifyjs dist/panzoom.js > dist/panzoom.min.js",
+    "build": "browserify -s panzoom ./index.js > dist/panzoom.js",
     "start": "npm run build"
   },
   "keywords": [

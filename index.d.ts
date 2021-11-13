@@ -30,9 +30,9 @@ declare module "panzoom" {
     boundsPadding?: number;
     zoomDoubleClickSpeed?: number;
     zoomSpeed?: number;
-    initialX?: number,
-    initialY?: number,
-    initialZoom?: number,
+    initialX?: number;
+    initialY?: number;
+    initialZoom?: number;
     pinchSpeed?: number;
     beforeWheel?: (e: WheelEvent) => void;
     beforeMouseDown?: (e: MouseEvent) => void;
@@ -44,6 +44,7 @@ declare module "panzoom" {
     enableTextSelection?: boolean;
     disableKeyboardInteraction?: boolean;
     transformOrigin?: TransformOrigin;
+    twoFingerPan?: boolean;
   }
 
   export interface PanZoom {
@@ -66,7 +67,10 @@ declare module "panzoom" {
     ) => Promise<boolean>;
     getTransform: () => Transform;
     showRectangle: (rect: ClientRect) => void;
-    smoothShowRectangle: (rect: ClientRect, duration: (from:ClientRect, to:ClientRect) => number) => Promise<boolean>;
+    smoothShowRectangle: (
+      rect: ClientRect,
+      duration: (from: ClientRect, to: ClientRect) => number
+    ) => Promise<boolean>;
     pause: () => void;
     resume: () => void;
     isPaused: () => boolean;
