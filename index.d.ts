@@ -14,8 +14,10 @@ declare module "panzoom" {
   export interface SnapZoom {
     in: number;
     out: number;
-    trigger: number;
+    triggerIn: number;
+    triggerOut: number;
   }
+
   export interface Transform {
     x: number;
     y: number;
