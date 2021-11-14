@@ -108,7 +108,7 @@ function createPanZoom(domElement, options) {
   var mouseY;
   var oldMouseX;
   var oldMouseY;
-
+  var oldScale;
   var pinchZoomLength;
 
   var smoothScroll;
@@ -126,6 +126,10 @@ function createPanZoom(domElement, options) {
   var showRectangleAnimation;
 
   var multiTouch;
+  // on OSX we don't get touch events, but gestures.
+  // on iPad we get touch events AND gestures.
+  // if we got a single touch event, we ignore gestures
+  var hasTouchEvents;
   var paused = false;
 
   listenForEvents();
@@ -617,6 +621,8 @@ function createPanZoom(domElement, options) {
     owner.addEventListener("touchstart", onTouch, { passive: false });
     owner.addEventListener("keydown", onKeyDown, { passive: false });
 
+    owner.addEventListener("gesturestart", onTouch, { passive: false });
+
     // Need to listen on the owner container, so that we are not limited
     // by the size of the scrollable domElement
     wheel.addWheelListener(owner, onMouseWheel, { passive: false });
@@ -630,6 +636,8 @@ function createPanZoom(domElement, options) {
     owner.removeEventListener("keydown", onKeyDown);
     owner.removeEventListener("dblclick", onDoubleClick);
     owner.removeEventListener("touchstart", onTouch);
+
+    owner.removeEventListener("gesturestart", onTouch);
 
     if (frameAnimation) {
       window.cancelAnimationFrame(frameAnimation);
@@ -717,13 +725,20 @@ function createPanZoom(domElement, options) {
   function onTouch(e) {
     // let the override the touch behavior
     beforeTouch(e);
-
-    if (e.touches.length === 1) {
-      return handleSingleFingerTouch(e, e.touches[0]);
-    } else if (e.touches.length === 2) {
-      // handleTouchMove() will care about pinch zoom.
-      pinchZoomLength = getPinchZoomLength(e.touches[0], e.touches[1]);
+    if (e.touches) {
+      hasTouchEvents = true;
+      if (e.touches.length === 1) {
+        return handleSingleFingerTouch(e, e.touches[0]);
+      } else if (e.touches.length === 2) {
+        // handleTouchMove() will care about pinch zoom.
+        pinchZoomLength = getPinchZoomLength(e.touches[0], e.touches[1]);
+        multiTouch = true;
+        startTouchListenerIfNeeded();
+      }
+    } else if (!hasTouchEvents && e.type === "gesturestart") {
+      // OSX
       multiTouch = true;
+      oldScale = e.scale;
       startTouchListenerIfNeeded();
     }
   }
@@ -774,10 +789,15 @@ function createPanZoom(domElement, options) {
     document.addEventListener("touchmove", handleTouchMove);
     document.addEventListener("touchend", handleTouchEnd);
     document.addEventListener("touchcancel", handleTouchEnd);
+
+    owner.addEventListener("gesturechange", handleTouchMove, {
+      passive: false,
+    });
+    owner.addEventListener("gestureend", handleTouchEnd, { passive: false });
   }
 
   function handleTouchMove(e) {
-    if (e.touches.length === 1) {
+    if (e.touches && e.touches.length === 1) {
       e.stopPropagation();
       var touch = e.touches[0];
 
@@ -793,7 +813,7 @@ function createPanZoom(domElement, options) {
       mouseX = point.x;
       mouseY = point.y;
       internalMoveBy(dx, dy);
-    } else if (e.touches.length === 2) {
+    } else if (e.touches && e.touches.length === 2) {
       // it's a zoom, let's find direction
       multiTouch = true;
       var t1 = e.touches[0];
@@ -836,6 +856,18 @@ function createPanZoom(domElement, options) {
       pinchZoomLength = currentPinchLength;
       e.stopPropagation();
       e.preventDefault();
+    } else if (!hasTouchEvents && e.type == "gesturechange") {
+      multiTouch = true;
+      var offset = getOffsetXY(e);
+      var point = transformToScreen(offset.x, offset.y);
+      lastSingleFingerOffset = offset;
+
+      const scale = 1 - (oldScale - e.scale) * pinchSpeed;
+      publicZoomTo(point.x, point.y, scale);
+
+      e.stopPropagation();
+      e.preventDefault();
+      oldScale = e.scale;
     }
   }
 
@@ -853,10 +885,16 @@ function createPanZoom(domElement, options) {
   }
 
   function handleTouchEnd(e) {
-    if (multiTouch && e.scale != 1 && e.rotation != 0) {
+    if (
+      (lastSingleFingerOffset &&
+        multiTouch &&
+        e.scale != 1 &&
+        e.rotation != 0) ||
+      (lastSingleFingerOffset && e.type == "gestureend")
+    ) {
       handleSnapZoom(lastSingleFingerOffset.x, lastSingleFingerOffset.y);
     }
-    if (e.touches.length > 0) {
+    if (e.touches && e.touches.length > 0) {
       var offset = getOffsetXY(e.touches[0]);
       var point = transformToScreen(offset.x, offset.y);
       mouseX = point.x;
@@ -878,10 +916,9 @@ function createPanZoom(domElement, options) {
       }
 
       lastTouchEndTime = now;
-
-      triggerPanEnd();
-      releaseTouches();
     }
+    triggerPanEnd();
+    releaseTouches();
   }
 
   function getPinchZoomLength(finger1, finger2) {
@@ -966,10 +1003,15 @@ function createPanZoom(domElement, options) {
     document.removeEventListener("touchmove", handleTouchMove);
     document.removeEventListener("touchend", handleTouchEnd);
     document.removeEventListener("touchcancel", handleTouchEnd);
+
+    document.removeEventListener("gesturechange", handleTouchMove);
+    document.removeEventListener("gestureend", handleTouchEnd);
+    document.removeEventListener("gesturecancel", handleTouchEnd);
     panstartFired = false;
     multiTouch = false;
     oldMouseX = undefined;
     oldMouseY = undefined;
+    oldScale = undefined;
     touchInProgress = false;
   }
 
