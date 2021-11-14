@@ -70,6 +70,8 @@ function createPanZoom(domElement, options) {
   var twoFingerPan =
     typeof options.twoFingerPan === "boolean" ? options.twoFingerPan : false;
 
+  var snapZoom = parseSnapZoom(options.snapZoom);
+
   var boundsPadding =
     typeof options.boundsPadding === "number" ? options.boundsPadding : 0.05;
   var zoomDoubleClickSpeed =
@@ -128,6 +130,23 @@ function createPanZoom(domElement, options) {
 
   listenForEvents();
 
+  function debounce(func, wait, immediate) {
+    var timeout;
+    return function () {
+      console.log(`debounce`);
+      var context = this,
+        args = arguments;
+      var later = function () {
+        timeout = null;
+        if (!immediate) func.apply(context, args);
+      };
+      var callNow = immediate && !timeout;
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+      if (callNow) func.apply(context, args);
+    };
+  }
+
   var api = {
     dispose: dispose,
     moveBy: internalMoveBy,
@@ -159,6 +178,8 @@ function createPanZoom(domElement, options) {
     getZoomSpeed: getZoomSpeed,
     setZoomSpeed: setZoomSpeed,
   };
+
+  const debouncedSmoothZoomAbs = debounce(smoothZoomAbs, 100);
 
   eventify(api);
 
@@ -819,7 +840,23 @@ function createPanZoom(domElement, options) {
     }
   }
 
+  function handleSnapZoom(x, y, scale) {
+    if (snapZoom === undefined) return;
+
+    if (scale === undefined) {
+      scale = transform.scale;
+    }
+    if (scale <= snapZoom.trigger) {
+      debouncedSmoothZoomAbs(x, y, snapZoom.in);
+    } else if (scale > snapZoom.trigger) {
+      debouncedSmoothZoomAbs(x, y, snapZoom.out);
+    }
+  }
+
   function handleTouchEnd(e) {
+    if (multiTouch && e.scale != 1 && e.rotation != 0) {
+      handleSnapZoom(lastSingleFingerOffset.x, lastSingleFingerOffset.y);
+    }
     if (e.touches.length > 0) {
       var offset = getOffsetXY(e.touches[0]);
       var point = transformToScreen(offset.x, offset.y);
@@ -954,17 +991,28 @@ function createPanZoom(domElement, options) {
       e.preventDefault();
     } else {
       // default behaviour performs zoom on mousewheel
-      var delta = e.deltaY;
-      if (e.deltaMode > 0) delta *= 100;
 
-      var scaleMultiplier = getScaleMultiplier(delta);
+      var offset = transformOrigin
+        ? getTransformOriginOffset()
+        : getOffsetXY(e);
+      if (e.deltaX == 0 && Math.abs(e.deltaY) > 90) {
+        // this should be an actual mouse wheel with clicky scroll wheel
+        if (e.deltaY < 0) {
+          handleSnapZoom(offset.x, offset.y, snapZoom.trigger + 0.01);
+        } else {
+          handleSnapZoom(offset.x, offset.y, snapZoom.trigger - 0.01);
+        }
+      } else {
+        var delta = e.deltaY;
+        if (e.deltaMode > 0) delta *= 100;
 
-      if (scaleMultiplier !== 1) {
-        var offset = transformOrigin
-          ? getTransformOriginOffset()
-          : getOffsetXY(e);
-        publicZoomTo(offset.x, offset.y, scaleMultiplier);
-        e.preventDefault();
+        var scaleMultiplier = getScaleMultiplier(delta);
+
+        if (scaleMultiplier !== 1) {
+          publicZoomTo(offset.x, offset.y, scaleMultiplier);
+          e.preventDefault();
+        }
+        handleSnapZoom(offset.x, offset.y);
       }
     }
   }
@@ -1099,6 +1147,31 @@ function createPanZoom(domElement, options) {
   function triggerEvent(name) {
     api.fire(name, api);
   }
+}
+
+function parseSnapZoom(options) {
+  if (!options) return;
+  if (typeof options === "object") {
+    if (
+      !isNumber(options.in) ||
+      !isNumber(options.out) ||
+      !isNumber(options.trigger)
+    )
+      failSnapZoom(options);
+    return options;
+  }
+  failSnapZoom();
+}
+
+function failSnapZoom(options) {
+  console.error(options);
+  throw new Error(
+    [
+      "Cannot parse snap zoom settings.",
+      "Some good examples:",
+      "  {small: 0.5, large: 1.5, trigger: 1.0}",
+    ].join("\n")
+  );
 }
 
 function parseTransformOrigin(options) {

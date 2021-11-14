@@ -11,6 +11,11 @@ declare module "panzoom" {
     y: number;
   }
 
+  export interface SnapZoom {
+    in: number;
+    out: number;
+    trigger: number;
+  }
   export interface Transform {
     x: number;
     y: number;
@@ -44,6 +49,7 @@ declare module "panzoom" {
     enableTextSelection?: boolean;
     disableKeyboardInteraction?: boolean;
     transformOrigin?: TransformOrigin;
+    snapZoom?: SnapZoom;
     twoFingerPan?: boolean;
   }
 
