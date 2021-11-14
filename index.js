@@ -133,7 +133,6 @@ function createPanZoom(domElement, options) {
   function debounce(func, wait, immediate) {
     var timeout;
     return function () {
-      console.log(`debounce`);
       var context = this,
         args = arguments;
       var later = function () {
