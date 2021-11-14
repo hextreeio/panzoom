@@ -994,7 +994,7 @@ function createPanZoom(domElement, options) {
       var offset = transformOrigin
         ? getTransformOriginOffset()
         : getOffsetXY(e);
-      if (e.deltaX == 0 && Math.abs(e.deltaY) > 90) {
+      if (e.deltaX == 0 && Math.abs(e.deltaY) > 90 && snapZoom !== undefined) {
         // this should be an actual mouse wheel with clicky scroll wheel
         if (e.deltaY < 0) {
           handleSnapZoom(offset.x, offset.y, snapZoom.trigger + 0.01);
