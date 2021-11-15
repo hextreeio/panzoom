@@ -11,6 +11,11 @@ declare module "panzoom" {
     y: number;
   }
 
+  export interface Point {
+    x: number;
+    y: number;
+  }
+
   export interface SnapZoom {
     in: number;
     out: number;
@@ -62,6 +67,10 @@ declare module "panzoom" {
     centerOn: (ui: any) => Promise<boolean>;
     zoomTo: (clientX: number, clientY: number, scaleMultiplier: number) => void;
     zoomAbs: (clientX: number, clientY: number, zoomLevel: number) => void;
+    triggerSnapZoom: (x: number, y: number, scale: number) => void;
+    transformToScreen: (x: number, y: number) => Point;
+    transformToClientRect: (transform: Transform) => ClientRect;
+    clientRectToTransform: (rect: ClientRect) => Transform;
     smoothZoom: (
       clientX: number,
       clientY: number,

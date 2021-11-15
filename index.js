@@ -162,6 +162,10 @@ function createPanZoom(domElement, options) {
     smoothZoomAbs: smoothZoomAbs,
     showRectangle: showRectangle,
     smoothShowRectangle: publicSmoothShowRectangle,
+    clientRectToTransform: clientRectToTransform,
+    triggerSnapZoom: handleSnapZoom,
+    transformToClientRect: transformToClientRect,
+    transformToScreen: transformToScreen,
 
     pause: pause,
     resume: resume,
