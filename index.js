@@ -2,22 +2,22 @@
 /**
  * Allows to drag and zoom svg elements
  */
-var wheel = require("wheel");
-var animate = require("amator");
-var eventify = require("ngraph.events");
-var kinetic = require("./lib/kinetic.js");
-var createTextSelectionInterceptor = require("./lib/createTextSelectionInterceptor.js");
+import wheel from "wheel";
+import animate from "amator";
+import eventify from "ngraph.events";
+import kinetic from "./lib/kinetic.js";
+import createTextSelectionInterceptor from "./lib/createTextSelectionInterceptor.js";
 var domTextSelectionInterceptor = createTextSelectionInterceptor();
 var fakeTextSelectorInterceptor = createTextSelectionInterceptor(true);
-var Transform = require("./lib/transform.js");
-var makeSvgController = require("./lib/svgController.js");
-var makeDomController = require("./lib/domController.js");
+import Transform from "./lib/transform.js";
+import makeSvgController from "./lib/svgController.js";
+import makeDomController from "./lib/domController.js";
 
 var defaultZoomSpeed = 1;
 var defaultDoubleTapZoomSpeed = 1.75;
 var doubleTapSpeedInMS = 300;
 
-module.exports = createPanZoom;
+// module.exports = createPanZoom;
 
 /**
  * Creates a new instance of panzoom, so that an object can be panned and zoomed
@@ -25,7 +25,7 @@ module.exports = createPanZoom;
  * @param {DOMElement} domElement where panzoom should be attached.
  * @param {Object} options that configure behavior.
  */
-function createPanZoom(domElement, options) {
+export default function createPanZoom(domElement, options) {
   options = options || {};
 
   var panController = options.controller;
@@ -137,16 +137,15 @@ function createPanZoom(domElement, options) {
   function debounce(func, wait, immediate) {
     var timeout;
     return function () {
-      var context = this,
-        args = arguments;
+      var args = arguments;
       var later = function () {
         timeout = null;
-        if (!immediate) func.apply(context, args);
+        if (!immediate) func.apply(this, args);
       };
       var callNow = immediate && !timeout;
       clearTimeout(timeout);
       timeout = setTimeout(later, wait);
-      if (callNow) func.apply(context, args);
+      if (callNow) func.apply(this, args);
     };
   }
 
@@ -695,14 +694,14 @@ function createPanZoom(domElement, options) {
       // They don't want us to handle the key: https://github.com/anvaka/panzoom/issues/45
       return;
     }
-
+    var offset;
     if (x || y) {
       e.preventDefault();
       e.stopPropagation();
 
       var clientRect = owner.getBoundingClientRect();
       // movement speed should be the same in both X and Y direction:
-      var offset = Math.min(clientRect.width, clientRect.height);
+      offset = Math.min(clientRect.width, clientRect.height);
       var moveSpeedRatio = 0.05;
       var dx = offset * moveSpeedRatio * x;
       var dy = offset * moveSpeedRatio * y;
@@ -713,7 +712,7 @@ function createPanZoom(domElement, options) {
 
     if (z) {
       var scaleMultiplier = getScaleMultiplier(z * 100);
-      var offset = transformOrigin ? getTransformOriginOffset() : midPoint();
+      offset = transformOrigin ? getTransformOriginOffset() : midPoint();
       publicZoomTo(offset.x, offset.y, scaleMultiplier);
     }
   }
@@ -801,15 +800,16 @@ function createPanZoom(domElement, options) {
   }
 
   function handleTouchMove(e) {
+    var dx, dy, offset, point;
     if (e.touches && e.touches.length === 1) {
       e.stopPropagation();
       var touch = e.touches[0];
 
-      var offset = getOffsetXY(touch);
-      var point = transformToScreen(offset.x, offset.y);
+      offset = getOffsetXY(touch);
+      point = transformToScreen(offset.x, offset.y);
 
-      var dx = point.x - mouseX;
-      var dy = point.y - mouseY;
+      dx = point.x - mouseX;
+      dy = point.y - mouseY;
 
       if (dx !== 0 && dy !== 0) {
         triggerPanStart();
@@ -835,8 +835,8 @@ function createPanZoom(domElement, options) {
       mouseY = (firstTouchPoint.y + secondTouchPoint.y) / 2;
 
       if (oldMouseX !== undefined && oldMouseY !== undefined) {
-        var dx = mouseX - oldMouseX;
-        var dy = mouseY - oldMouseY;
+        dx = mouseX - oldMouseX;
+        dy = mouseY - oldMouseY;
 
         if (dx !== 0 && dy !== 0) {
           triggerPanStart();
@@ -850,7 +850,7 @@ function createPanZoom(domElement, options) {
       oldMouseY = mouseY;
 
       if (transformOrigin) {
-        var offset = getTransformOriginOffset();
+        offset = getTransformOriginOffset();
         mouseX = offset.x;
         mouseY = offset.y;
       }
@@ -862,8 +862,8 @@ function createPanZoom(domElement, options) {
       e.preventDefault();
     } else if (!hasTouchEvents && e.type == "gesturechange") {
       multiTouch = true;
-      var offset = getOffsetXY(e);
-      var point = transformToScreen(offset.x, offset.y);
+      offset = getOffsetXY(e);
+      point = transformToScreen(offset.x, offset.y);
       lastSingleFingerOffset = offset;
 
       const scale = 1 - (oldScale - e.scale) * pinchSpeed;
@@ -889,6 +889,7 @@ function createPanZoom(domElement, options) {
   }
 
   function handleTouchEnd(e) {
+    var offset;
     if (
       (lastSingleFingerOffset &&
         multiTouch &&
@@ -899,7 +900,7 @@ function createPanZoom(domElement, options) {
       handleSnapZoom(lastSingleFingerOffset.x, lastSingleFingerOffset.y);
     }
     if (e.touches && e.touches.length > 0) {
-      var offset = getOffsetXY(e.touches[0]);
+      offset = getOffsetXY(e.touches[0]);
       var point = transformToScreen(offset.x, offset.y);
       mouseX = point.x;
       mouseY = point.y;
@@ -907,7 +908,7 @@ function createPanZoom(domElement, options) {
       var now = new Date();
       if (now - lastTouchEndTime < doubleTapSpeedInMS) {
         if (transformOrigin) {
-          var offset = getTransformOriginOffset();
+          offset = getTransformOriginOffset();
           smoothZoom(offset.x, offset.y, zoomDoubleClickSpeed);
         } else {
           // We want untransformed x/y here.
@@ -1243,7 +1244,9 @@ function failTransformOrigin(options) {
   );
 }
 
-function noop() {}
+function noop() {
+  undefined;
+}
 
 function validateBounds(bounds) {
   var boundsType = typeof bounds;
