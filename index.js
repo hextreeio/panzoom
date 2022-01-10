@@ -175,6 +175,9 @@ export default function createPanZoom(domElement, options) {
     getMinZoom: getMinZoom,
     setMinZoom: setMinZoom,
 
+    setSnapZoom: setSnapZoom,
+    getSnapZoom: getSnapZoom,
+
     getMaxZoom: getMaxZoom,
     setMaxZoom: setMaxZoom,
 
@@ -185,7 +188,7 @@ export default function createPanZoom(domElement, options) {
     setZoomSpeed: setZoomSpeed,
   };
 
-  const debouncedSmoothZoomAbs = debounce(smoothZoomAbs, 100);
+  const debouncedSmoothZoomAbs = debounce(smoothZoomAbs, 100, true);
 
   eventify(api);
 
@@ -376,6 +379,13 @@ export default function createPanZoom(domElement, options) {
 
   function setMinZoom(newMinZoom) {
     minZoom = newMinZoom;
+  }
+
+  function setSnapZoom(newSnapZoom) {
+    snapZoom = parseSnapZoom(newSnapZoom);
+  }
+  function getSnapZoom() {
+    return snapZoom;
   }
 
   function getMaxZoom() {
@@ -1024,7 +1034,7 @@ export default function createPanZoom(domElement, options) {
     // if client does not want to handle this event - just ignore the call
     if (beforeWheel(e)) return;
 
-    cancelAllAnimations();
+    if (!snapZoom) cancelAllAnimations();
 
     if (
       twoFingerPan &&
