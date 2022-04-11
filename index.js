@@ -188,7 +188,7 @@ export default function createPanZoom(domElement, options) {
     setZoomSpeed: setZoomSpeed,
   };
 
-  const debouncedSmoothZoomAbs = debounce(smoothZoomAbs, 100, true);
+  const debouncedSmoothZoomAbs = debounce(smoothZoomAbs, 100, false);
 
   eventify(api);
 
@@ -1036,11 +1036,17 @@ export default function createPanZoom(domElement, options) {
 
     if (!snapZoom) cancelAllAnimations();
 
+    console.log(
+      `[panzoom] onWheel ${twoFingerPan} !${e.ctrlKey} ${e.deltaX}/${Math.abs(
+        e.deltaY
+      )} ${e.wheelDeltaY}`
+    );
     if (
       twoFingerPan &&
       !e.ctrlKey &&
-      !(e.deltaX == 0 && Math.abs(e.deltaY) > 90)
+      !(e.deltaX == 0 && Math.abs(e.wheelDeltaY) > 90)
     ) {
+      console.log(`[panzoom] onWheel panning`);
       triggerPanStart();
 
       internalMoveBy(e.wheelDeltaX * 0.5, e.wheelDeltaY * 0.5);
@@ -1051,14 +1057,22 @@ export default function createPanZoom(domElement, options) {
       var offset = transformOrigin
         ? getTransformOriginOffset()
         : getOffsetXY(e);
-      if (e.deltaX == 0 && Math.abs(e.deltaY) > 90 && snapZoom !== undefined) {
+
+      console.log(`[panzoom] onWheel ${Math.abs(e.wheelDeltaY)}`);
+      if (
+        e.deltaX == 0 &&
+        !e.ctrlKey &&
+        Math.abs(e.wheelDeltaY) > 90 &&
+        snapZoom !== undefined
+      ) {
         // this should be an actual mouse wheel with clicky scroll wheel
-        if (e.deltaY < 0) {
+        if (e.wheelDeltaY < 0) {
           handleSnapZoom(offset.x, offset.y, snapZoom.trigger + 0.01);
         } else {
           handleSnapZoom(offset.x, offset.y, snapZoom.trigger - 0.01);
         }
       } else {
+        // this is probably a touchpad or phone?
         var delta = e.deltaY;
         if (e.deltaMode > 0) delta *= 100;
 
