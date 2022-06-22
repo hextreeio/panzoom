@@ -1036,17 +1036,18 @@ export default function createPanZoom(domElement, options) {
 
     if (!snapZoom) cancelAllAnimations();
 
-    console.log(
+    /* console.log(
       `[panzoom] onWheel ${twoFingerPan} !${e.ctrlKey} ${e.deltaX}/${Math.abs(
         e.deltaY
       )} ${e.wheelDeltaY}`
     );
+    */
     if (
       twoFingerPan &&
       !e.ctrlKey &&
       !(e.deltaX == 0 && Math.abs(e.wheelDeltaY) > 90)
     ) {
-      console.log(`[panzoom] onWheel panning`);
+      //console.log(`[panzoom] onWheel panning`);
       triggerPanStart();
 
       internalMoveBy(e.wheelDeltaX * 0.5, e.wheelDeltaY * 0.5);
@@ -1058,7 +1059,7 @@ export default function createPanZoom(domElement, options) {
         ? getTransformOriginOffset()
         : getOffsetXY(e);
 
-      console.log(`[panzoom] onWheel ${Math.abs(e.wheelDeltaY)}`);
+      //console.log(`[panzoom] onWheel ${Math.abs(e.wheelDeltaY)}`);
       if (
         e.deltaX == 0 &&
         !e.ctrlKey &&
