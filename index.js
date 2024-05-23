@@ -26,6 +26,7 @@ var doubleTapSpeedInMS = 300;
  * @param {Object} options that configure behavior.
  */
 export default function createPanZoom(domElement, options) {
+
   options = options || {};
 
   var panController = options.controller;
@@ -278,7 +279,7 @@ export default function createPanZoom(domElement, options) {
     var from = transformToClientRect(transform);
 
     // default duration is 600ms
-    var dur = 600;
+    var dur = 150;
     if (typeof duration === "function") {
       // let consumer calculate a duration based on the new and current transform
       dur = duration(from, to);
@@ -1036,18 +1037,11 @@ export default function createPanZoom(domElement, options) {
 
     if (!snapZoom) cancelAllAnimations();
 
-    /* console.log(
-      `[panzoom] onWheel ${twoFingerPan} !${e.ctrlKey} ${e.deltaX}/${Math.abs(
-        e.deltaY
-      )} ${e.wheelDeltaY}`
-    );
-    */
     if (
       twoFingerPan &&
       !e.ctrlKey &&
       !(e.deltaX == 0 && Math.abs(e.wheelDeltaY) > 90)
     ) {
-      //console.log(`[panzoom] onWheel panning`);
       triggerPanStart();
 
       internalMoveBy(e.wheelDeltaX * 0.5, e.wheelDeltaY * 0.5);
